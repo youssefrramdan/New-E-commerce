@@ -43,6 +43,9 @@ const userSchema = new mongoose.Schema(
     profileImage: {
       type: String,
     },
+    otpChangedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,

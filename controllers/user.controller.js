@@ -178,6 +178,7 @@ const regenerateMyOTP = asyncHandler(async (req, res, next) => {
 
   // Generate new OTP
   const newOTP = user.generateOTP();
+  user.otpChangedAt = new Date();
   await user.save();
 
   res.status(200).json({

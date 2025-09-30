@@ -188,14 +188,14 @@ const protectedRoutes = asyncHandler(async (req, res, next) => {
     );
   }
 
-  if (currentUser.passwordChangedAt) {
-    const passChangedTimestamp = parseInt(
-      currentUser.passwordChangedAt.getTime() / 1000,
+  if (currentUser.otpChangedAt) {
+    const otpChangedTimestamp = parseInt(
+      currentUser.otpChangedAt.getTime() / 1000,
       10
     );
-    if (passChangedTimestamp > decoded.iat) {
+    if (otpChangedTimestamp > decoded.iat) {
       return next(
-        new ApiError("User recently changed password. Please login again.", 401)
+        new ApiError("User recently changed OTP. Please login again.", 401)
       );
     }
   }
