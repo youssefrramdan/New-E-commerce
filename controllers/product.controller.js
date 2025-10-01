@@ -71,7 +71,6 @@ const getAllProducts = asyncHandler(async (req, res, next) => {
 
     // Execute query 
     const products = await mongooseQuery;
-
     res.status(200).json({ message: "success", results: products.length, page, data: products });
 });
 
@@ -92,7 +91,7 @@ const getSpecificProduct = asyncHandler(async (req, res, next) => {
 
 /**
  * @desc    Update specific product 
- * @route   UPDATE /api/v1/products/:id
+ * @route   Put /api/v1/products/:id
  * @access  Public
  */
 
@@ -119,11 +118,9 @@ const updateProduct = asyncHandler(async (req, res, next) => {
  * @access  Private
  */
 
-const daleteProduct = asyncHandler(async (req, res, next) => {
+const deleteProduct = asyncHandler(async (req, res, next) => {
     const { id } = req.params;
-    const product = await productModel.findByIdAndDelete({ _id: id }, req.body, {
-        new: true,
-    });
+    const product = await productModel.findByIdAndDelete({ _id: id });
     if (!product) {
         return next(new ApiError(`No product for this id ${id}`, 404));
     }
@@ -135,5 +132,5 @@ export{
     getAllProducts,
     getSpecificProduct,
     updateProduct,
-    daleteProduct
+    deleteProduct
 }
