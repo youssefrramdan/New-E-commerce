@@ -45,8 +45,45 @@ const deleteCoupon = asyncHandler(async (req, res, next) => {
     res.status(200).json({ message: "Coupon deleted successfully" });
 });
 
+
+/**
+ * @desc    Get specific coupon by id
+ * @route   GET /api/v1/coupons/:id
+ * @access  Private
+ */
+const getSingleCoupon = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const coupon = await couponModel.findById(id);
+
+    if (!coupon) {
+        return next(new ApiError(`Coupon not found for id: ${id}`, 404));
+    }
+
+    res.status(200).json({ message: "success", data: coupon });
+});
+
+/**
+ * @desc    Update specific coupon
+ * @route   PUT /api/v1/coupons/:id
+ * @access  Private
+ */
+const updateCoupon = asyncHandler(async (req, res, next) => {
+    const { id } = req.params;
+    const coupon = await couponModel.findByIdAndUpdate(id, req.body, {
+        new: true,
+    });
+
+    if (!coupon) {
+        return next(new ApiError(`Coupon not found for id: ${id}`, 404));
+    }
+
+    res.status(200).json({ message: "success", data: coupon });
+});
+
 export {
     createCoupon,
     getAllCoupons,
-    deleteCoupon
+    deleteCoupon,
+    getSingleCoupon,
+    updateCoupon
 }
