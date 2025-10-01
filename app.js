@@ -8,6 +8,7 @@ import ApiError from "./utils/apiError.js";
 import globalError from "./middlewares/errorMiddleware.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
+import productRouter from "./routes/product.route.js";
 
 dotenv.config({ path: "./config/config.env" });
 
@@ -35,6 +36,7 @@ if (process.env.NODE_ENV === "development") {
 // mount Routes
 app.use("/api/v1/auth", authRoutes);
 app.use("/api/v1/users", userRoutes);
+app.use("/api/v1/products", productRouter);
 
 app.all("*", (req, res, next) => {
   next(new ApiError(`Cant find this route ${req.originalUrl}`, 400));
