@@ -247,7 +247,7 @@ const addToCart = asyncHandler(async (req, res, next) => {
   addItemToCart(cart, {
     productId: product._id,
     name: product.name,
-    price: product.price,
+    price: (product.priceAfterDiscount || product.price),
     quantity: qty,
     image: product.image || "",
   });
@@ -335,7 +335,7 @@ const updateCartItem = asyncHandler(async (req, res, next) => {
     removeItemFromCart(cart, productId);
   } else {
     // Check stock availability
-    const product = await Product.findById(productId);
+    const product = await productModel.findById(productId);
     if (product && product.stock && qty > product.stock) {
       return next(
         new ApiError(`Only ${product.stock} items available in stock`, 400)
