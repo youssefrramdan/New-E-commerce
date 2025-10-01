@@ -249,7 +249,7 @@ const addToCart = asyncHandler(async (req, res, next) => {
     name: product.name,
     price: product.price,
     quantity: qty,
-    image: product.imageCover || "",
+    image: product.image || "",
   });
 
   // Save cart to database
