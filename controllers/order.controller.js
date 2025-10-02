@@ -1,10 +1,15 @@
 import asyncHandler from "express-async-handler";
 import ApiError from "../utils/apiError.js";
-
+//import Stripe from "stripe";
 import cartModel from "../models/cart.model.js";
 import productModel from "../models/product.model.js";
 import orderModel from "../models/order.model.js";
+/*import dotenv from "dotenv";
 
+
+dotenv.config({ path: "./config/config.env" });
+const stripe = new Stripe(process.env.STRIPE_SECRET);
+*/
 /**
  * @desc    Create CashOrder
  * @route   POST /api/orders/cash/:cartId
@@ -94,6 +99,8 @@ const getAllOrders = asyncHandler(async (req, res, next) => {
     data: orders,
   });
 });
+
+
 
 /**
  * @desc    Get specific order by ID
@@ -191,11 +198,73 @@ const updateOrderToDelivered = asyncHandler(async (req, res, next) => {
 });
 
 
+
+/**
+ * @desc    get checkout session from stripe and send it as response
+ * @route   GET /api/orders/checkout_session/:cartId
+ * @access  Private (user)
+ */
+
+const checkoutSession = asyncHandler(async (req, res, next) => {
+  // 1) Get the cart
+  const cart = await cartModel
+    .findById(req.params.cartId)
+    .populate("items.productId"); // ✅ التصحيح هنا
+
+  if (!cart) {
+    return next(new ApiError("Cart not found", 404));
+  }
+
+  // 2) Convert cart items into stripe line_items
+  const line_items = cart.items.map((item) => ({
+    price_data: {
+    
+      currency: "egp",
+      product_data: {
+        name: item.name || item.productId.name, // fallback
+        description: item.productId?.description || "",
+        images: item.image ? [item.image] : [],
+      },
+      unit_amount: Math.round(item.price * 100),
+    },
+    quantity: item.quantity,
+  }));
+
+  // 3) Create checkout session
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ["card"],
+    line_items,
+    mode: "payment",
+    success_url: `${req.protocol}://${req.get('host')}/orders`,
+        cancel_url: `${req.protocol}://${req.get('host')}/cart`,
+    client_reference_id: req.params.cartId,
+    
+    metadata: {
+      userId: req.user._id.toString(),
+      shippingAddress: JSON.stringify(req.body.shippingAddress),
+    },
+  });
+
+  res.status(200).json({
+    status: "success",
+    session,
+  });
+});
+
+
+
+
+
+
+
+
 export {
   createCashOrder,
   getAllOrders,
   getSpecificOrder,
   getLoggedUserOrders,
   updateOrderToPaid,
-  updateOrderToDelivered
-};
+  updateOrderToDelivered,
+  checkoutSession
+}
+
