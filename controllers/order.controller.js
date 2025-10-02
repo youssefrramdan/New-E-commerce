@@ -43,7 +43,7 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
       couponDiscount: cart.couponDiscount || 0,
       shippingFee: cart.shippingFee || 0,
       tips: cart.tips || 0,
-      pointsUsed:pointsUsed || 0,
+      pointsUsed:cart.pointsUsed || 0,
       finalTotal,
     },
     paymentMethod: isStripePayment ? "card" : "cash",

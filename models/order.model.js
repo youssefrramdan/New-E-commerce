@@ -43,7 +43,7 @@ const orderSchema = new mongoose.Schema(
     },
      status: {
       type: String,
-      enum: ['pending', 'processing', 'shipped', 'delivered', 'cancelled'],
+      enum: ['pending','delivered', 'cancelled'],
       default: 'pending',
     },
     isPaid: {
@@ -56,7 +56,7 @@ const orderSchema = new mongoose.Schema(
       default: false,
     },
     deliveredAt: Date,
-   
+
   },
   { timestamps: true }
 );
