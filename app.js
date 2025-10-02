@@ -11,6 +11,7 @@ import userRoutes from "./routes/user.route.js";
 import productRouter from "./routes/product.route.js";
 import cartRouter from "./routes/cart.route.js"
 import couponRouter from "./routes/coupon.route.js";
+import orderRoutes from "./routes/order.route.js"
 
 dotenv.config({ path: "./config/config.env" });
 
@@ -41,6 +42,7 @@ app.use("/api/v1/users", userRoutes);
 app.use("/api/v1/products", productRouter);
 app.use("/api/v1/cart", cartRouter);
 app.use("/api/v1/coupons", couponRouter);
+app.use("/api/v1/orders", orderRoutes);
 
 app.all("*", (req, res, next) => {
   next(new ApiError(`Cant find this route ${req.originalUrl}`, 400));

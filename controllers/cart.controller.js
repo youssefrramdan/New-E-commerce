@@ -288,6 +288,7 @@ const getCart = asyncHandler(async (req, res, next) => {
   res.status(200).json({
     message: "success",
     data: {
+      cartId: cart._id,
       cart: cart.items,
       totalItems: cart.totalItems,
       totalPrice: cart.totalPrice,
