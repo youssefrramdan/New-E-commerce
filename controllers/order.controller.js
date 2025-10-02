@@ -136,9 +136,66 @@ const getLoggedUserOrders = asyncHandler(async (req, res, next) => {
   });
 });
 
+
+/**
+ * @desc    Update order to paid
+ * @route   PUT /api/orders/:id/pay
+ * @access  Private/Admin
+ */
+const updateOrderToPaid = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const order = await orderModel.findById(id);
+  if (!order) {
+    return next(new ApiError("Order not found", 404));
+  }
+
+  order.isPaid = true;
+  order.paidAt = Date.now();
+
+  await order.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Order marked as paid",
+    data: order,
+  });
+});
+
+
+
+
+/**
+ * @desc    Update order to delivered
+ * @route   PUT /api/orders/:id/deliver
+ * @access  Private/Admin
+ */
+const updateOrderToDelivered = asyncHandler(async (req, res, next) => {
+  const { id } = req.params;
+
+  const order = await orderModel.findById(id);
+  if (!order) {
+    return next(new ApiError("Order not found", 404));
+  }
+
+  order.isDelivered = true;
+  order.deliveredAt = Date.now();
+
+  await order.save();
+
+  res.status(200).json({
+    status: "success",
+    message: "Order marked as delivered",
+    data: order,
+  });
+});
+
+
 export {
   createCashOrder,
   getAllOrders,
   getSpecificOrder,
   getLoggedUserOrders,
+  updateOrderToPaid,
+  updateOrderToDelivered
 };
