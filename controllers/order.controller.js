@@ -203,17 +203,30 @@ const checkoutSession = asyncHandler(async (req, res, next) => {
   const cart = await cartModel.findById(cartId);
   if (!cart) return next(new ApiError("Cart not found", 404));
 
+  // Calculate final total as in cart logic
+  const totalPrice = cart.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
+  const discount =
+    (cart.discount || 0) + (cart.couponDiscount || 0) + (cart.pointsUsed || 0);
+  const shippingFee = cart.shippingFee || 0;
+  const tips = cart.tips || 0;
+  const finalTotal = Math.max(0, totalPrice - discount + shippingFee + tips);
+
   const session = await stripe.checkout.sessions.create({
-    line_items: cart.items.map((item) => ({
-      price_data: {
-        currency: "egp",
-        unit_amount: item.price * 100,
-        product_data: { name: item.name },
-      },
-      quantity: item.quantity,
-    })),
     mode: "payment",
-    success_url: `${req.protocol}://${req.get("host")}/orders`,
+    line_items: [
+      {
+        price_data: {
+          currency: "egp",
+          unit_amount: Math.round(finalTotal * 100),
+          product_data: { name: "Order total" },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${req.protocol}://${req.get("host")}/api/v1/orders/card/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${req.protocol}://${req.get("host")}/cart`,
     customer_email: req.user.email,
     client_reference_id: cartId,
@@ -292,6 +305,29 @@ const webhookCheckout = asyncHandler(async (req, res, next) => {
   res.status(200).json({ received: true });
 });
 
+// Fallback confirmation endpoint in case webhooks are not configured/reachable
+const confirmCardPayment = asyncHandler(async (req, res, next) => {
+  const { session_id: sessionId } = req.query;
+  if (!sessionId) return next(new ApiError("Missing session_id", 400));
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  if (!session || session.payment_status !== "paid") {
+    return next(new ApiError("Payment not completed", 400));
+  }
+
+  try {
+    await createCardOrder(session);
+  } catch (err) {
+    // If cart already deleted (webhook processed), consider it success
+    if (String(err.message).includes("Cart not found")) {
+      return res.status(200).json({ message: "success" });
+    }
+    return next(new ApiError("Failed to create order", 500));
+  }
+
+  res.status(200).json({ message: "success" });
+});
+
 export {
   createCashOrder,
   getAllOrders,
@@ -301,4 +337,5 @@ export {
   updateOrderToDelivered,
   checkoutSession,
   webhookCheckout,
+  confirmCardPayment,
 };
