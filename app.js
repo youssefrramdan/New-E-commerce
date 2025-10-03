@@ -9,11 +9,10 @@ import globalError from "./middlewares/errorMiddleware.js";
 import authRoutes from "./routes/auth.route.js";
 import userRoutes from "./routes/user.route.js";
 import productRouter from "./routes/product.route.js";
-import cartRouter from "./routes/cart.route.js"
+import cartRouter from "./routes/cart.route.js";
 import couponRouter from "./routes/coupon.route.js";
-import orderRoutes from "./routes/order.route.js"
+import orderRoutes from "./routes/order.route.js";
 import { webhookCheckout } from "./controllers/order.controller.js";
-
 
 dotenv.config({ path: "./config/config.env" });
 
@@ -29,11 +28,11 @@ app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(compression());
 
-app.get("/webhook-checkout",express.raw({
-  type:'application/json'
-},
-webhookCheckout
-))
+app.post(
+  "/webhook-checkout",
+  express.raw({ type: "application/json" }),
+  webhookCheckout
+);
 
 // middlewares
 app.use(express.json());

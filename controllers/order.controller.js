@@ -1,13 +1,13 @@
+import dotenv from "dotenv";
+import Stripe from "stripe";
 import asyncHandler from "express-async-handler";
 import ApiError from "../utils/apiError.js";
-import Stripe from "stripe";
 import cartModel from "../models/cart.model.js";
 import productModel from "../models/product.model.js";
 import orderModel from "../models/order.model.js";
-import dotenv from "dotenv";
 
 dotenv.config({ path: "./config/config.env" });
-const stripe = new Stripe(process.env.STRIPE_SECRET);
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 /**
  * @desc    Create CashOrder
@@ -38,7 +38,7 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
   const { completedPayment, paymentMethod } = req.body;
   const isStripePayment = completedPayment && paymentMethod === "card";
 
-  const order = new orderModel({
+  const order = await orderModel.create({
     userId,
     items: cart.items,
     shippingAddress: req.body.shippingAddress || { address: cart.address },
@@ -57,8 +57,6 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
     isPaid: isStripePayment,
     PaidAt: isStripePayment ? new Date() : undefined,
   });
-
-  await order.save();
 
   const options = cart.items.map((item) => ({
     updateOne: {
@@ -215,8 +213,8 @@ const checkoutSession = asyncHandler(async (req, res, next) => {
       quantity: item.quantity,
     })),
     mode: "payment",
-     success_url: `${req.protocol}://${req.get('host')}/orders`,
-        cancel_url: `${req.protocol}://${req.get('host')}/cart`,
+    success_url: `${req.protocol}://${req.get("host")}/orders`,
+    cancel_url: `${req.protocol}://${req.get("host")}/cart`,
     customer_email: req.user.email,
     client_reference_id: cartId,
     metadata: {
