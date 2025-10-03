@@ -12,6 +12,8 @@ import productRouter from "./routes/product.route.js";
 import cartRouter from "./routes/cart.route.js"
 import couponRouter from "./routes/coupon.route.js";
 import orderRoutes from "./routes/order.route.js"
+import { webhookCheckout } from "./controllers/order.controller.js";
+
 
 dotenv.config({ path: "./config/config.env" });
 
@@ -26,6 +28,12 @@ const corsOptions = {
 app.use(cors(corsOptions));
 app.options("*", cors(corsOptions));
 app.use(compression());
+
+app.get("/webhook-checkout",express.raw({
+  type:'application/json'
+},
+webhookCheckout
+))
 
 // middlewares
 app.use(express.json());

@@ -1,15 +1,15 @@
 import asyncHandler from "express-async-handler";
 import ApiError from "../utils/apiError.js";
-//import Stripe from "stripe";
+import Stripe from "stripe";
 import cartModel from "../models/cart.model.js";
 import productModel from "../models/product.model.js";
 import orderModel from "../models/order.model.js";
-/*import dotenv from "dotenv";
+import dotenv from "dotenv";
 
 
 dotenv.config({ path: "./config/config.env" });
 const stripe = new Stripe(process.env.STRIPE_SECRET);
-*/
+
 /**
  * @desc    Create CashOrder
  * @route   POST /api/orders/cash/:cartId
@@ -209,7 +209,7 @@ const checkoutSession = asyncHandler(async (req, res, next) => {
   // 1) Get the cart
   const cart = await cartModel
     .findById(req.params.cartId)
-    .populate("items.productId"); // ✅ التصحيح هنا
+    .populate("items.productId");   
 
   if (!cart) {
     return next(new ApiError("Cart not found", 404));
@@ -221,7 +221,7 @@ const checkoutSession = asyncHandler(async (req, res, next) => {
     
       currency: "egp",
       product_data: {
-        name: item.name || item.productId.name, // fallback
+        name: item.name || item.productId.name, 
         description: item.productId?.description || "",
         images: item.image ? [item.image] : [],
       },
@@ -253,6 +253,28 @@ const checkoutSession = asyncHandler(async (req, res, next) => {
 
 
 
+const webhookCheckout=asyncHandler(async (req, res, next) => {
+ const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    return res.status(400).send(`Webhook Error: ${err.message}`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    console.log("create order here....")
+  }
+   
+});
+
+
+
 
 
 
@@ -265,6 +287,7 @@ export {
   getLoggedUserOrders,
   updateOrderToPaid,
   updateOrderToDelivered,
-  checkoutSession
+  checkoutSession,
+  webhookCheckout
 }
 
