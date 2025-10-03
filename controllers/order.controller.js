@@ -6,7 +6,6 @@ import productModel from "../models/product.model.js";
 import orderModel from "../models/order.model.js";
 import dotenv from "dotenv";
 
-
 dotenv.config({ path: "./config/config.env" });
 const stripe = new Stripe(process.env.STRIPE_SECRET);
 
@@ -23,7 +22,10 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
   if (!cart) return next(new ApiError("Cart not found", 404));
   if (cart.items.length === 0) return next(new ApiError("Cart is empty", 400));
 
-  const totalPrice = cart.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+  const totalPrice = cart.items.reduce(
+    (sum, item) => sum + item.price * item.quantity,
+    0
+  );
   let finalTotal =
     totalPrice -
     (cart.discount || 0) -
@@ -48,7 +50,7 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
       couponDiscount: cart.couponDiscount || 0,
       shippingFee: cart.shippingFee || 0,
       tips: cart.tips || 0,
-      pointsUsed:cart.pointsUsed || 0,
+      pointsUsed: cart.pointsUsed || 0,
       finalTotal,
     },
     paymentMethod: isStripePayment ? "card" : "cash",
@@ -60,7 +62,7 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
 
   const options = cart.items.map((item) => ({
     updateOne: {
-      filter: { _id: item.productId._id },
+      filter: { _id: item.productId },
       update: { $inc: { sold: item.quantity, quantity: -item.quantity } },
     },
   }));
@@ -99,8 +101,6 @@ const getAllOrders = asyncHandler(async (req, res, next) => {
     data: orders,
   });
 });
-
-
 
 /**
  * @desc    Get specific order by ID
@@ -143,7 +143,6 @@ const getLoggedUserOrders = asyncHandler(async (req, res, next) => {
   });
 });
 
-
 /**
  * @desc    Update order to paid
  * @route   PUT /api/orders/:id/pay
@@ -158,7 +157,7 @@ const updateOrderToPaid = asyncHandler(async (req, res, next) => {
   }
 
   order.isPaid = true;
-  order.paidAt = Date.now();
+  order.PaidAt = Date.now();
 
   await order.save();
 
@@ -168,9 +167,6 @@ const updateOrderToPaid = asyncHandler(async (req, res, next) => {
     data: order,
   });
 });
-
-
-
 
 /**
  * @desc    Update order to delivered
@@ -197,64 +193,88 @@ const updateOrderToDelivered = asyncHandler(async (req, res, next) => {
   });
 });
 
-
-
 /**
  * @desc    get checkout session from stripe and send it as response
  * @route   GET /api/orders/checkout_session/:cartId
  * @access  Private (user)
  */
-
 const checkoutSession = asyncHandler(async (req, res, next) => {
-  // 1) Get the cart
-  const cart = await cartModel
-    .findById(req.params.cartId)
-    .populate("items.productId");   
+  const { cartId } = req.params;
+  const { shippingAddress } = req.body;
 
-  if (!cart) {
-    return next(new ApiError("Cart not found", 404));
-  }
+  const cart = await cartModel.findById(cartId);
+  if (!cart) return next(new ApiError("Cart not found", 404));
 
-  // 2) Convert cart items into stripe line_items
-  const line_items = cart.items.map((item) => ({
-    price_data: {
-    
-      currency: "egp",
-      product_data: {
-        name: item.name || item.productId.name, 
-        description: item.productId?.description || "",
-        images: item.image ? [item.image] : [],
-      },
-      unit_amount: Math.round(item.price * 100),
-    },
-    quantity: item.quantity,
-  }));
-
-  // 3) Create checkout session
   const session = await stripe.checkout.sessions.create({
-    payment_method_types: ["card"],
-    line_items,
+    line_items: cart.items.map((item) => ({
+      price_data: {
+        currency: "egp",
+        unit_amount: item.price * 100,
+        product_data: { name: item.name },
+      },
+      quantity: item.quantity,
+    })),
     mode: "payment",
-    success_url: `${req.protocol}://${req.get('host')}/orders`,
+     success_url: `${req.protocol}://${req.get('host')}/orders`,
         cancel_url: `${req.protocol}://${req.get('host')}/cart`,
-    client_reference_id: req.params.cartId,
-    
+    customer_email: req.user.email,
+    client_reference_id: cartId,
     metadata: {
       userId: req.user._id.toString(),
-      shippingAddress: JSON.stringify(req.body.shippingAddress),
+      shippingAddress: JSON.stringify(shippingAddress),
     },
   });
 
-  res.status(200).json({
-    status: "success",
-    session,
-  });
+  res.status(200).json({ message: "success", session });
 });
 
+const createCardOrder = async (session) => {
+  const cartId = session.client_reference_id;
+  const cart = await cartModel.findById(cartId);
+  if (!cart) throw new Error("Cart not found");
 
+  const orderPrice = session.amount_total / 100;
 
-const webhookCheckout=asyncHandler(async (req, res, next) => {
- const sig = req.headers['stripe-signature'];
+  const order = await orderModel.create({
+    userId: session.metadata.userId,
+    items: cart.items,
+    shippingAddress: JSON.parse(session.metadata.shippingAddress),
+    totals: {
+      totalItems: cart.items.reduce((sum, i) => sum + i.quantity, 0),
+      totalPrice: cart.totalPrice,
+      discount: cart.discount || 0,
+      couponCode: cart.couponCode || null,
+      couponDiscount: cart.couponDiscount || 0,
+      shippingFee: cart.shippingFee || 0,
+      tips: cart.tips || 0,
+      finalTotal: orderPrice,
+    },
+    paymentMethod: "card",
+    isPaid: true,
+    PaidAt: Date.now(),
+  });
+
+  // update stock
+  const bulkUpdate = cart.items.map((item) => ({
+    updateOne: {
+      filter: { _id: item.productId },
+      update: {
+        $inc: {
+          quantity: -item.quantity,
+          sold: item.quantity,
+        },
+      },
+    },
+  }));
+  await productModel.bulkWrite(bulkUpdate);
+
+  await cartModel.findByIdAndDelete(cartId);
+
+  return order;
+};
+
+const webhookCheckout = asyncHandler(async (req, res, next) => {
+  const sig = req.headers["stripe-signature"];
   let event;
 
   try {
@@ -267,18 +287,12 @@ const webhookCheckout=asyncHandler(async (req, res, next) => {
     return res.status(400).send(`Webhook Error: ${err.message}`);
   }
 
-  if (event.type === 'checkout.session.completed') {
-    console.log("create order here....")
+  if (event.type === "checkout.session.completed") {
+    await createCardOrder(event.data.object);
   }
-   
+
+  res.status(200).json({ received: true });
 });
-
-
-
-
-
-
-
 
 export {
   createCashOrder,
@@ -288,6 +302,5 @@ export {
   updateOrderToPaid,
   updateOrderToDelivered,
   checkoutSession,
-  webhookCheckout
-}
-
+  webhookCheckout,
+};
