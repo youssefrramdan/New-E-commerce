@@ -5,9 +5,21 @@ import ApiError from "../utils/apiError.js";
 import cartModel from "../models/cart.model.js";
 import productModel from "../models/product.model.js";
 import orderModel from "../models/order.model.js";
+import userModel from "../models/user.model.js";
 
 dotenv.config({ path: "./config/config.env" });
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Award 10 points for every 100 EGP paid
+const addPointsForOrder = async (userId, amountPaid) => {
+  const pointsToAdd = Math.floor((amountPaid || 0) / 100) * 10;
+  if (pointsToAdd <= 0) return;
+  await userModel.findByIdAndUpdate(
+    userId,
+    { $inc: { points: pointsToAdd } },
+    { new: true }
+  );
+};
 
 /**
  * @desc    Create CashOrder
@@ -70,6 +82,11 @@ const createCashOrder = asyncHandler(async (req, res, next) => {
     await cartModel.findByIdAndDelete(cart._id);
   } catch (error) {
     return next(new ApiError("Failed to update product stock", 500));
+  }
+
+  // If paid (Stripe card payment flow completed in this endpoint), award points now
+  if (order.isPaid) {
+    await addPointsForOrder(userId, order.totals.finalTotal);
   }
 
   res.status(201).json({
@@ -158,6 +175,9 @@ const updateOrderToPaid = asyncHandler(async (req, res, next) => {
   order.PaidAt = Date.now();
 
   await order.save();
+
+  // Award points when order is marked as paid (cash orders)
+  await addPointsForOrder(order.userId, order.totals?.finalTotal || 0);
 
   res.status(200).json({
     status: "success",
@@ -280,6 +300,9 @@ const createCardOrder = async (session) => {
   await productModel.bulkWrite(bulkUpdate);
 
   await cartModel.findByIdAndDelete(cartId);
+
+  // Award points for successful card payment
+  await addPointsForOrder(session.metadata.userId, orderPrice);
 
   return order;
 };
