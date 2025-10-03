@@ -1,3 +1,10 @@
+# Node
 node_modules/
-.vscode/
-school-store.postman_collection.json/
+
+# Env files
+.env
+.env.local
+.env.*.local
+config/config.env
+
+
