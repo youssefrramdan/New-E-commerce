@@ -1,20 +1,19 @@
 import express from "express";
 import {
-  signup,
   login,
   logout,
   protectedRoutes,
+  adminLogin,
 } from "../controllers/auth.controller.js";
-import {
-  signupValidator,
-  loginValidator,
+import loginValidator, {
+  adminLoginValidator,
 } from "../utils/validator/authValidators.js";
 
 const router = express.Router();
 
 // Public routes
-router.post("/signup", signupValidator, signup);
 router.post("/login", loginValidator, login);
+router.post("/admin/login", adminLoginValidator, adminLogin);
 
 // Protected routes
 router.post("/logout", protectedRoutes, logout);

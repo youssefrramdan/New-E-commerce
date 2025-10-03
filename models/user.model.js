@@ -27,14 +27,27 @@ const userSchema = new mongoose.Schema(
         "Please provide a valid Egyptian phone number",
       ],
     },
-    otp: {
+    email: {
+      type: String,
+      lowercase: true,
+      trim: true,
+      unique: true,
+      sparse: true,
+      match: [
+        /^[\w-.]+@([\w-]+\.)+[\w-]{2,4}$/,
+        "Please provide a valid email address",
+      ],
+    },
+    password: {
+      type: String,
+      minlength: 6,
+      select: false,
+    },
+    code: {
       type: String,
       required: false,
+      trim: true,
     },
-    // isVerified: {
-    //   type: Boolean,
-    //   default: false,
-    // },
     role: {
       type: String,
       enum: ["user", "admin"],
@@ -43,35 +56,24 @@ const userSchema = new mongoose.Schema(
     profileImage: {
       type: String,
     },
-    otpChangedAt: {
-      type: Date,
-    },
   },
   {
     timestamps: true,
   }
 );
 
-// step 1: generate OTP
-userSchema.methods.generateOTP = function () {
-  const otp = Math.floor(100000 + Math.random() * 900000).toString();
-  this.otp = otp; // Store plain OTP, pre-save middleware will hash it
-  return otp;
-};
+// No hashing for code. Admin can read it plainly and share with users.
 
-// step 2: compare OTP
-userSchema.methods.compareOTP = async function (enteredOTP) {
-  if (!this.otp) return false;
-  return await bcrypt.compare(enteredOTP, this.otp);
-};
-
-// step 3: hash OTP if modified directly
+// Hash password if modified
 userSchema.pre("save", async function (next) {
-  if (!this.isModified("otp") || !this.otp) {
-    return next();
-  }
-  this.otp = await bcrypt.hash(this.otp, 12);
+  if (!this.isModified("password") || !this.password) return next();
+  this.password = await bcrypt.hash(this.password, 12);
   next();
 });
+
+userSchema.methods.comparePassword = async function (enteredPassword) {
+  if (!this.password) return false;
+  return bcrypt.compare(enteredPassword, this.password);
+};
 
 export default mongoose.model("User", userSchema);

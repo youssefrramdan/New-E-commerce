@@ -1,6 +1,41 @@
 import { body, param } from "express-validator";
 import validatorMiddleware from "../../middlewares/validatorMiddleware.js";
 
+// Create admin validator
+export const createAdminValidator = [
+  body("firstName").notEmpty().withMessage("First name is required"),
+  body("lastName").notEmpty().withMessage("Last name is required"),
+  body("phone")
+    .notEmpty()
+    .withMessage("Phone number is required")
+    .matches(/^(\+201|01|00201)[0-2,5]{1}[0-9]{8}$/)
+    .withMessage("Please provide a valid Egyptian phone number"),
+  body("email")
+    .notEmpty()
+    .withMessage("Email is required")
+    .isEmail()
+    .withMessage("Please provide a valid email"),
+  body("password")
+    .notEmpty()
+    .withMessage("Password is required")
+    .isLength({ min: 6 })
+    .withMessage("Password must be at least 6 characters"),
+  validatorMiddleware,
+];
+
+// Create normal user validator
+export const createNormalUserValidator = [
+  body("firstName").notEmpty().withMessage("First name is required"),
+  body("lastName").notEmpty().withMessage("Last name is required"),
+  body("phone")
+    .notEmpty()
+    .withMessage("Phone number is required")
+    .matches(/^(\+201|01|00201)[0-2,5]{1}[0-9]{8}$/)
+    .withMessage("Please provide a valid Egyptian phone number"),
+  body("code").not().exists().withMessage("Code is generated automatically"),
+  validatorMiddleware,
+];
+
 // Update user validation (for admin)
 export const updateUserValidator = [
   param("id").isMongoId().withMessage("Invalid user ID format"),
@@ -23,12 +58,6 @@ export const updateUserValidator = [
     .optional()
     .matches(/^(\+201|01|00201)[0-2,5]{1}[0-9]{8}$/)
     .withMessage("Please provide a valid Egyptian phone number"),
-
-  body("role")
-    .optional()
-    .isIn(["user", "admin"])
-    .withMessage("Role must be either 'user' or 'admin'"),
-
   validatorMiddleware,
 ];
 
@@ -56,26 +85,11 @@ export const updateMeValidator = [
   // Prevent updating sensitive fields
   body("role").not().exists().withMessage("You cannot update your role"),
 
-  body("otp")
-    .not()
-    .exists()
-    .withMessage("You cannot update OTP through this route"),
+  body("code").not().exists().withMessage("You cannot update code here"),
 
   validatorMiddleware,
 ];
 
-// Change user role validation (admin only)
-export const changeRoleValidator = [
-  param("id").isMongoId().withMessage("Invalid user ID format"),
-
-  body("role")
-    .notEmpty()
-    .withMessage("Role is required")
-    .isIn(["user", "admin"])
-    .withMessage("Role must be either 'user' or 'admin'"),
-
-  validatorMiddleware,
-];
 
 // Get specific user validation
 export const getUserValidator = [
