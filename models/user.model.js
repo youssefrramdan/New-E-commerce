@@ -27,7 +27,12 @@ const userSchema = new mongoose.Schema(
         "Please provide a valid Egyptian phone number",
       ],
     },
-    email: {
+    points: {
+        type: Number,
+        default: 0,
+        min: 0,
+      },
+      email: {
       type: String,
       lowercase: true,
       trim: true,

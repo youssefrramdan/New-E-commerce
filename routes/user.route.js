@@ -11,6 +11,7 @@ import {
   getUserStats,
   updateUserImage,
 } from "../controllers/user.controller.js";
+import { getUserPoints } from "../controllers/cart.controller.js";
 import {
   updateUserValidator,
   updateMeValidator,
@@ -31,6 +32,8 @@ const upload = createUploader("users");
 userRouter.get("/me", getMe);
 userRouter.patch("/updateMe", updateMeValidator, updateMe);
 userRouter.patch("/updateUserImage", upload.single("image"), updateUserImage);
+// GET /api/v1/users/points - Get user points
+userRouter.get("/points", protectedRoutes, getUserPoints);
 
 // Admin only routes
 // userRouter.use(allowTo("admin"));
@@ -48,6 +51,5 @@ userRouter
   .get(getUserValidator, getSpecificUser)
   .put(updateUserValidator, updateUser)
   .delete(deleteUserValidator, deleteUser);
-
 
 export default userRouter;
