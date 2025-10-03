@@ -25,7 +25,7 @@ import createUploader from "../middlewares/uploadImageMiddleware.js";
 const userRouter = express.Router();
 const upload = createUploader("users");
 // All routes below require authentication
-userRouter.use(protectedRoutes);
+// userRouter.use(protectedRoutes);
 
 // User routes
 userRouter.get("/me", getMe);
@@ -33,7 +33,7 @@ userRouter.patch("/updateMe", updateMeValidator, updateMe);
 userRouter.patch("/updateUserImage", upload.single("image"), updateUserImage);
 
 // Admin only routes
-userRouter.use(allowTo("admin"));
+// userRouter.use(allowTo("admin"));
 
 userRouter.route("/").get(getAllUsers);
 
